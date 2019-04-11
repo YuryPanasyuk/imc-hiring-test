@@ -1,0 +1,226 @@
+﻿@model Website.Models.ContactUsModel
+
+@{
+    ViewBag.Title = "Contact Us";
+}
+
+<h2>@ViewBag.Title.</h2>
+
+@using (Html.BeginForm("ContactUs", "Home", FormMethod.Post, new { id = "contactForm" }))
+{
+<div>
+    <h3>Name</h3>
+    <section data-step="1">
+        <label for="firstName">First Name *</label>
+        @Html.TextBoxFor(item => item.FirstName, new { id = "firstName", name = "firstName" })
+
+        <label for="lastName">Last Name *</label>
+        @Html.TextBoxFor(item => item.LastName, new { id = "lastName", name = "lastName" })
+
+        <p>(*) Mandatory</p>
+    </section>
+
+    <h3>Location</h3>
+    <section data-step="2">
+
+        <label for="provinceTerritory">Province/Territory *</label>
+        @Html.TextBoxFor(item => item.ProvinceTerritory, new { id = "provinceTerritory", name = "provinceTerritory", @class = "required" })
+
+        <label for="city">City *</label>
+        @Html.TextBoxFor(item => item.City, new { id = "city", name = "city", @class = "required" })
+
+        <label for="streetAddress">Street Address *</label>
+        @Html.TextBoxFor(item => item.StreetAddress, new { id = "streetAddress", name = "streetAddress", @class = "required" })
+
+        <label for="unitApt">Unit/Apt</label>
+        @Html.TextBoxFor(item => item.UnitApt, new { id = "unitApt", name = "unitApt" })
+
+        <p>(*) Mandatory</p>
+    </section>
+
+    <h3>Contact</h3>
+    <section data-step="3">
+
+        <label for="email">Email *</label>
+        @Html.TextBoxFor(item => item.Email, new { id = "email", name = "email", @class = "required email" })
+
+        <p>(*) Mandatory</p>
+    </section>
+
+</div>
+}
+
+<script type="text/javascript">
+
+    var form = $("#contactForm");
+
+    form.validate({
+        errorPlacement: function errorPlacement(error, element) { element.before(error); },
+        rules: {
+            firstName: {
+                required: true,
+                maxlength: 5
+            }
+        }
+    });
+
+    form.children("div").steps({
+        headerTag: "h3",
+        bodyTag: "section",
+        transitionEffect: "slideLeft",
+        onStepChanging: function (event, currentIndex, newIndex) {
+
+            if (newIndex < currentIndex) {
+                return true;
+            }
+
+            var isValid = true;
+            isValid &= validate(currentIndex, 0, "firstName", 40, "First Name has a max of {0} characters.", true, true, false);
+            isValid &= validate(currentIndex, 0, "lastName", 40, "Last Name has a max of {0} characters.", true, true, false);
+
+            isValid &= validate(currentIndex, 1, "streetAddress", 128, "Street Address has a max of {0} characters.", true, true, false);
+            isValid &= validate(currentIndex, 1, "city", 32, "City has a max of {0} characters.", true, true, false);
+            isValid &= validate(currentIndex, 1, "provinceTerritory", 32, "Province has a max of {0} characters.", true, true, false);
+            isValid &= validate(currentIndex, 1, "unitApt", 128, "Unit/Apt has a max of {0} characters.", false, true, false);
+
+            isValid &= validate(currentIndex, 2, "email", 128, "Email has a max of {0} characters.", true, true, true);
+
+
+            if (!isValid) {
+                return false;
+            }
+
+            form.validate().settings.ignore = ":disabled,:hidden";
+            return form.valid();
+        },
+        onFinishing: function (event, currentIndex) {
+            form.validate().settings.ignore = ":disabled";
+            return form.valid();
+        },
+        onFinished: function (event, currentIndex) {
+            alert("Submitted!");
+        }
+    });
+
+    function validate(currentIndex, tabIndex, controlName, maxLength, errorText, isRequired, isMaxLength, isEmail) {
+
+        var control = $('#' + controlName);
+        var errorControlName = controlName + "Error";
+        var errorControl = $('#' + errorControlName);
+        errorControl.remove();
+
+        if (currentIndex != tabIndex) {
+            return true;
+        }
+
+        if (control.val().length == 0 && isRequired) {
+
+            var text = "This field is required.";
+            var newErrorControl = "<label id=\"{0}\" for=\"{1}\" class=\"error\">{2}</label>".format(errorControlName, controlName, text);
+            control.before(newErrorControl);
+            return false;
+        }
+
+        
+        if (control.val().length > maxLength && isMaxLength) {
+
+            var text = errorText.format(maxLength);
+            var newErrorControl = "<label id=\"{0}\" for=\"{1}\" class=\"error\">{2}</label>".format(errorControlName, controlName, text);
+            control.before(newErrorControl);
+            return false;
+        }
+
+        if (isEmail) {
+
+            var re = /^([A-Za-z0-9_-.])+@@([A-Za-z0-9_-.])+.([A-Za-z]{2,4})$/;
+            var isValid = re.test(email);
+            if (!isValid) {
+                var text = "Email must be in the correct format.";
+                var newErrorControl = "<label id=\"{0}\" for=\"{1}\" class=\"error\">{2}</label>".format(errorControlName, controlName, text);
+                control.before(newErrorControl);
+            }
+
+            return re.test(email);
+        }
+
+        return true;
+    }
+
+    $(function () {
+        var names = ["Alberta",
+            "British Columbia",
+            "Manitoba",
+            "New Brunswick",
+            "Newfoundland and Labrador",
+            "Nova Scotia",
+            "Ontario",
+            "Prince Edward Island",
+            "Quebec",
+            "Saskatchewan",
+            "Northwest Territories",
+            "Nunavut",
+            "Yukon"];
+
+        $("#provinceTerritory").autocomplete({
+            source: function (request, response) {
+                return match(names, request, response);
+            }
+        });
+    });
+
+    $(function () {
+
+        var cities = {};
+
+        $("#city").focus(function () {
+
+            var url = '@Url.Action("Cities", "Home")';
+            var province = $("#provinceTerritory").val();
+
+            $.ajax({
+                type: "GET",
+                url: url,
+                data: { province: province },
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: successFunc,
+                error: errorFunc
+            });
+
+            function successFunc(data) {
+                cities = data.Cities;
+            }
+
+            function errorFunc() {
+                //alert('error');
+            }
+        });
+
+        $("#city").autocomplete({
+            source: function (request, response) {
+                return match(cities, request, response);
+            },
+            minLength: 1
+        });
+    });
+
+    function match(data, request, response) {
+        var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
+        response($.grep(data, function (value) {
+            value = value.label || value.value || value;
+            return matcher.test(value);
+        }));
+    }
+    
+    if (!String.prototype.format) {
+        String.prototype.format = function () {
+            var args = arguments;
+            return this.replace(/{(\d+)}/g, function (match, number) {
+                return typeof args[number] != 'undefined'
+                    ? args[number]
+                    : match
+                    ;
+            });
+        };
+    }
+</script>
